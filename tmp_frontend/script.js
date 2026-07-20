@@ -31,6 +31,7 @@ async function loadSiteConfig() {
       if (cached.announcements) applyAnnouncements(cached.announcements);
       if (cached.whyChoose)   applyWhyChoose(cached.whyChoose);
       if (cached.process)     applyProcess(cached.process);
+      if (cached.seo)         applySeo(cached.seo);
       console.log('Successfully loaded all site content instantly from local cache.');
       hasCache = true;
     }
@@ -41,7 +42,7 @@ async function loadSiteConfig() {
   // Define the fetching process
   const fetchFreshConfig = async () => {
     try {
-      const [companySnap, heroSnap, servicesSnap, contactSnap, themeSnap, announcementsSnap, whySnap, processSnap] =
+      const [companySnap, heroSnap, servicesSnap, contactSnap, themeSnap, announcementsSnap, whySnap, processSnap, seoSnap] =
         await Promise.all([
           getDoc(doc(db, 'siteConfig', 'companyInfo')),
           getDoc(doc(db, 'siteConfig', 'hero')),
@@ -51,6 +52,7 @@ async function loadSiteConfig() {
           getDoc(doc(db, 'siteConfig', 'announcements')),
           getDoc(doc(db, 'siteConfig', 'whyChoose')),
           getDoc(doc(db, 'siteConfig', 'process')),
+          getDoc(doc(db, 'siteConfig', 'seo')),
         ]);
 
       const activeConfigs = {};
@@ -94,6 +96,11 @@ async function loadSiteConfig() {
         const data = processSnap.data();
         applyProcess(data);
         activeConfigs.process = data;
+      }
+      if (seoSnap.exists()) {
+        const data = seoSnap.data();
+        applySeo(data);
+        activeConfigs.seo = data;
       }
 
       // Save full package to cache
@@ -1174,6 +1181,52 @@ function applyProcess(d) {
       `;
     }).join('');
     reObserve();
+  }
+}
+
+// ─── SEO Management ──────────────────────────────────────────
+function applySeo(d) {
+  if (!d) return;
+  if (d.title) {
+    document.title = d.title;
+    const ogTitleMeta = document.querySelector('meta[property="og:title"]');
+    if (ogTitleMeta) {
+      ogTitleMeta.setAttribute('content', d.ogTitle || d.title);
+    }
+  }
+  if (d.description) {
+    const descMeta = document.querySelector('meta[name="description"]');
+    if (descMeta) {
+      descMeta.setAttribute('content', d.description);
+    }
+    const ogDescMeta = document.querySelector('meta[property="og:description"]');
+    if (ogDescMeta) {
+      ogDescMeta.setAttribute('content', d.ogDescription || d.description);
+    }
+  }
+  if (d.keywords) {
+    let keywordsMeta = document.querySelector('meta[name="keywords"]');
+    if (!keywordsMeta) {
+      keywordsMeta = document.createElement('meta');
+      keywordsMeta.setAttribute('name', 'keywords');
+      document.head.appendChild(keywordsMeta);
+    }
+    keywordsMeta.setAttribute('content', d.keywords);
+  }
+  if (d.ogImage) {
+    let ogImgMeta = document.querySelector('meta[property="og:image"]');
+    if (!ogImgMeta) {
+      ogImgMeta = document.createElement('meta');
+      ogImgMeta.setAttribute('property', 'og:image');
+      document.head.appendChild(ogImgMeta);
+    }
+    ogImgMeta.setAttribute('content', d.ogImage);
+  }
+  if (d.ogType) {
+    let ogTypeMeta = document.querySelector('meta[property="og:type"]');
+    if (ogTypeMeta) {
+      ogTypeMeta.setAttribute('content', d.ogType);
+    }
   }
 }
 

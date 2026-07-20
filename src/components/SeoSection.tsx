@@ -107,6 +107,12 @@ export default function SeoSection({ seoData, onSave }: SeoSectionProps) {
   const [description, setDescription] = useState('');
   const [keywords, setKeywords] = useState('');
 
+  // Open Graph States
+  const [ogTitle, setOgTitle] = useState('');
+  const [ogDescription, setOgDescription] = useState('');
+  const [ogImage, setOgImage] = useState('');
+  const [ogType, setOgType] = useState('website');
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -179,6 +185,10 @@ export default function SeoSection({ seoData, onSave }: SeoSectionProps) {
       setTitle(seoData.title || '');
       setDescription(seoData.description || '');
       setKeywords(seoData.keywords || '');
+      setOgTitle(seoData.ogTitle || '');
+      setOgDescription(seoData.ogDescription || '');
+      setOgImage(seoData.ogImage || '');
+      setOgType(seoData.ogType || 'website');
     }
   }, [seoData]);
 
@@ -186,7 +196,7 @@ export default function SeoSection({ seoData, onSave }: SeoSectionProps) {
     e.preventDefault();
     confirm({
       title: 'Save SEO Configuration',
-      message: 'Are you sure you want to write the updated SEO title, description, and keywords to Firestore?',
+      message: 'Are you sure you want to write the updated SEO title, description, keywords, and Open Graph metadata to Firestore?',
       type: 'save',
       onConfirm: async () => {
         setSaving(true);
@@ -195,7 +205,11 @@ export default function SeoSection({ seoData, onSave }: SeoSectionProps) {
           const updatedSeo: SeoConfig = {
             title: title.trim(),
             description: description.trim(),
-            keywords: keywords.trim()
+            keywords: keywords.trim(),
+            ogTitle: ogTitle.trim(),
+            ogDescription: ogDescription.trim(),
+            ogImage: ogImage.trim(),
+            ogType: ogType
           };
 
           try {
@@ -507,26 +521,164 @@ export default function SeoSection({ seoData, onSave }: SeoSectionProps) {
             </div>
           </div>
 
-          {/* Action Bar */}
-          <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-700/60">
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white rounded-xl text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors shadow-sm"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Save SEO Settings
-                </>
-              )}
-            </button>
+          {/* Action Bar inside first card removed, we put it at the very bottom after both cards */}
+        </div>
+
+        {/* 2. Open Graph (OG) Social Metadata Card */}
+        <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/60 rounded-3xl p-6 md:p-8 shadow-sm space-y-8">
+          <div className="border-b border-slate-100 dark:border-slate-700 pb-5">
+            <h2 className="text-xl font-extrabold text-slate-800 dark:text-white flex items-center gap-2.5">
+              <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              Open Graph Social Media Settings
+            </h2>
+            <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">
+              Customize how your website appears when shared on social channels like LinkedIn, Facebook, Slack, and WhatsApp.
+            </p>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Left Col: Inputs */}
+            <div className="space-y-5">
+              {/* OG Title */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Open Graph Title (og:title)
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    Defaults to SEO title if blank
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={ogTitle}
+                  onChange={(e) => setOgTitle(e.target.value)}
+                  placeholder={title || "e.g. Stonex - Industrial Solutions"}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-700 rounded-xl text-sm"
+                />
+              </div>
+
+              {/* OG Description */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Open Graph Description (og:description)
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    Defaults to SEO description if blank
+                  </span>
+                </div>
+                <textarea
+                  rows={3}
+                  value={ogDescription}
+                  onChange={(e) => setOgDescription(e.target.value)}
+                  placeholder={description || "e.g. Your trusted partner for industrial trading..."}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-700 rounded-xl text-sm leading-relaxed outline-none"
+                />
+              </div>
+
+              {/* OG Image URL */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">
+                  Open Graph Image URL (og:image)
+                </label>
+                <input
+                  type="text"
+                  value={ogImage}
+                  onChange={(e) => setOgImage(e.target.value)}
+                  placeholder="e.g. https://stonex.com/images/og-share.jpg"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-700 rounded-xl text-sm"
+                />
+                <p className="text-[10px] text-slate-400 leading-tight">
+                  Recommended size: 1200x630 pixels. Ensure it is a secure (https) public URL.
+                </p>
+              </div>
+
+              {/* OG Type */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">
+                  Open Graph Type (og:type)
+                </label>
+                <select
+                  value={ogType}
+                  onChange={(e) => setOgType(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-700 rounded-xl text-sm outline-none cursor-pointer"
+                >
+                  <option value="website">website</option>
+                  <option value="article">article</option>
+                  <option value="business">business</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Right Col: Live Social Card Simulator */}
+            <div className="space-y-4">
+              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">
+                Social Link Share Preview Simulator
+              </label>
+              
+              {/* Simulated Social Share Card (LinkedIn/Facebook Style) */}
+              <div className="bg-[#f3f6f8] dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs w-full max-w-sm mx-auto font-sans">
+                {/* Simulated Image Area */}
+                <div className="aspect-[1.91/1] w-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center relative overflow-hidden border-b border-slate-200/50 dark:border-slate-800/50">
+                  {ogImage ? (
+                    <img 
+                      src={ogImage} 
+                      alt="Social Preview" 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="text-slate-400 dark:text-slate-600 flex flex-col items-center gap-2">
+                      <Globe className="w-8 h-8" />
+                      <span className="text-[10px] font-semibold">1200 x 630 Share Image</span>
+                    </div>
+                  )}
+                  <span className="absolute bottom-2 left-2 px-2 py-0.5 bg-slate-900/80 backdrop-blur-xs rounded text-[9px] text-white font-medium">
+                    {ogType}
+                  </span>
+                </div>
+
+                {/* Content Area */}
+                <div className="p-4 space-y-1 text-left bg-white dark:bg-slate-950">
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold font-sans">STONEX.COM</p>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-white line-clamp-1 font-sans">
+                    {ogTitle.trim() ? ogTitle : (title.trim() ? title : "Stonex – Industrial Trading & Equipment Solutions")}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed font-sans">
+                    {ogDescription.trim() ? ogDescription : (description.trim() ? description : "Your trusted partner for industrial trading, heavy equipment rental, civil material supply, and personal protective equipment.")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl text-[11px] text-indigo-600 dark:text-indigo-400 leading-relaxed">
+                💡 **Pro-Tip**: Social engines cache metadata. When making changes, use public scrapers (like LinkedIn Post Inspector or Facebook Sharing Debugger) to clear the CDN cache.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Global Submit Action Bar Card */}
+        <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/60 rounded-3xl p-6 md:p-8 shadow-sm flex justify-end">
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white rounded-xl text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors shadow-sm"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving Configuration...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Save All SEO Settings
+              </>
+            )}
+          </button>
         </div>
       </form>
 
