@@ -223,13 +223,26 @@ function applyHero(d) {
         const video = document.createElement('video');
         let currentVidIdx = 0;
         video.src = activeVideos[currentVidIdx];
+        
+        // Critical iOS/Android autoplay and inline playback attributes
         video.setAttribute('autoplay', '');
         video.setAttribute('muted', '');
         video.setAttribute('playsinline', '');
         video.setAttribute('webkit-playsinline', '');
+        video.setAttribute('preload', 'auto');
         video.muted = true;
         video.autoplay = true;
         video.playsInline = true;
+
+        // Fallback Poster image setup to prevent a black screen during load or failure
+        const posterUrl = (bgImages && bgImages[0]) || 'hero_banner.jpg';
+        video.setAttribute('poster', posterUrl);
+
+        // Apply background image style to the container itself as an immediate fallback
+        heroBg.style.backgroundImage = `url("${posterUrl}")`;
+        heroBg.style.backgroundSize = 'cover';
+        heroBg.style.backgroundPosition = 'center';
+        heroBg.style.backgroundRepeat = 'no-repeat';
         
         // Loop if only 1 video URL is present
         if (activeVideos.length === 1) {
@@ -374,7 +387,12 @@ function applyServices(d) {
     }
     
     if (d.bgType === 'video' && d.bgVideoUrl) {
-      servicesBg.style.backgroundImage = '';
+      // Set immediate background fallback
+      const posterUrl = d.bgImage || 'industrial_trading.jpg';
+      servicesBg.style.backgroundImage = `url("${posterUrl}")`;
+      servicesBg.style.backgroundSize = 'cover';
+      servicesBg.style.backgroundPosition = 'center';
+      servicesBg.style.backgroundRepeat = 'no-repeat';
       servicesBg.classList.add('has-image');
       
       const video = document.createElement('video');
@@ -387,6 +405,9 @@ function applyServices(d) {
       video.setAttribute('muted', '');
       video.setAttribute('loop', '');
       video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.setAttribute('preload', 'auto');
+      video.setAttribute('poster', posterUrl);
       video.style.position = 'absolute';
       video.style.inset = '0';
       video.style.width = '100%';

@@ -2231,6 +2231,83 @@ body.glass-sections .accordion-item.glass-dark:hover {
   background: rgba(255, 255, 255, 0.12) !important;
 }
 
+/* ══════════════════════════════════════
+   MOBILE CRITICAL FIXES (Layout, Logo, Video)
+   ══════════════════════════════════════ */
+
+/* 1. Prevent Layout Shift & Horizontal Overflow */
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Restrict container-level children to prevent horizontal scroll leakage */
+.section, .hero, .site-header, .topbar, footer {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* Decrease padding of layout container on smaller mobile viewports to prevent squishing */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+/* 2. Perfectly Stable & Responsive Header SVG Logo */
+.logo {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-shrink: 0 !important;
+  text-decoration: none !important;
+  max-width: 100%;
+}
+
+.logo-icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.logo-icon svg {
+  display: block !important;
+  max-width: 100% !important;
+}
+
+.logo-icon img {
+  display: block !important;
+  max-width: 100% !important;
+  object-fit: contain !important;
+}
+
+/* 3. HTML5 Video Background Fallbacks */
+.hero-bg, .services-bg {
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-color: #0c0f1d !important; /* Elegant deep dark slate fallback */
+}
+
+/* Keep video properly positioned and scaled */
+.hero-video, .services-bg video {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+
 
 
 
