@@ -2240,11 +2240,16 @@ body.glass-sections .accordion-item.glass-dark:hover {
 
 /* 1. Prevent Layout Shift & Horizontal Overflow */
 html, body {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: hidden !important;
+  width: 100% !important;
+  max-width: 100% !important;
   position: relative;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure all elements calculate their width properly without breaking the layout boundary */
+*, *::before, *::after {
+  box-sizing: border-box !important;
 }
 
 /* Restrict container-level children to prevent horizontal scroll leakage */
