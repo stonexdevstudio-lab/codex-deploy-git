@@ -32,6 +32,7 @@ async function loadSiteConfig() {
       if (cached.whyChoose)   applyWhyChoose(cached.whyChoose);
       if (cached.process)     applyProcess(cached.process);
       if (cached.seo)         applySeo(cached.seo);
+      if (cached.logistics)   applyLogisticsConfig(cached.logistics);
       console.log('Successfully loaded all site content instantly from local cache.');
       hasCache = true;
     }
@@ -42,7 +43,7 @@ async function loadSiteConfig() {
   // Define the fetching process
   const fetchFreshConfig = async () => {
     try {
-      const [companySnap, heroSnap, servicesSnap, contactSnap, themeSnap, announcementsSnap, whySnap, processSnap, seoSnap] =
+      const [companySnap, heroSnap, servicesSnap, contactSnap, themeSnap, announcementsSnap, whySnap, processSnap, seoSnap, logisticsSnap] =
         await Promise.all([
           getDoc(doc(db, 'siteConfig', 'companyInfo')),
           getDoc(doc(db, 'siteConfig', 'hero')),
@@ -53,6 +54,7 @@ async function loadSiteConfig() {
           getDoc(doc(db, 'siteConfig', 'whyChoose')),
           getDoc(doc(db, 'siteConfig', 'process')),
           getDoc(doc(db, 'siteConfig', 'seo')),
+          getDoc(doc(db, 'siteConfig', 'logistics')),
         ]);
 
       const activeConfigs = {};
@@ -101,6 +103,11 @@ async function loadSiteConfig() {
         const data = seoSnap.data();
         applySeo(data);
         activeConfigs.seo = data;
+      }
+      if (logisticsSnap.exists()) {
+        const data = logisticsSnap.data();
+        applyLogisticsConfig(data);
+        activeConfigs.logistics = data;
       }
 
       // Save full package to cache
@@ -1226,6 +1233,18 @@ function applySeo(d) {
     let ogTypeMeta = document.querySelector('meta[property="og:type"]');
     if (ogTypeMeta) {
       ogTypeMeta.setAttribute('content', d.ogType);
+    }
+  }
+}
+
+function applyLogisticsConfig(d) {
+  if (!d) return;
+  const floatOpenBtn = document.getElementById('tracking-float-btn');
+  if (floatOpenBtn) {
+    if (d.trackingEnabled === false) {
+      floatOpenBtn.style.setProperty('display', 'none', 'important');
+    } else {
+      floatOpenBtn.style.setProperty('display', 'flex', 'important');
     }
   }
 }

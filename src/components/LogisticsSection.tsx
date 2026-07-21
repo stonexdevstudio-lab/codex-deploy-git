@@ -188,6 +188,7 @@ export default function LogisticsSection() {
   
   // Data State
   const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [trackingEnabled, setTrackingEnabled] = useState(true);
   const [carriers, setCarriers] = useState<CarrierIntegrations>(INITIAL_CARRIERS);
   const [rules, setRules] = useState<ShippingRule[]>([]);
   
@@ -270,13 +271,15 @@ export default function LogisticsSection() {
             await setDoc(configDocRef, {
               shipments: DEFAULT_SHIPMENTS,
               carriers: data.carriers || INITIAL_CARRIERS,
-              rules: data.rules || DEFAULT_RULES
+              rules: data.rules || DEFAULT_RULES,
+              trackingEnabled: data.trackingEnabled !== false
             }, { merge: true });
           }
 
           setShipments(loadedShipments);
           setCarriers(data.carriers || INITIAL_CARRIERS);
           setRules(data.rules || DEFAULT_RULES);
+          setTrackingEnabled(data.trackingEnabled !== false);
           
           if (loadedShipments.length > 0) {
             setSelectedShipment(loadedShipments[0]);
@@ -286,13 +289,15 @@ export default function LogisticsSection() {
           setShipments(DEFAULT_SHIPMENTS);
           setCarriers(INITIAL_CARRIERS);
           setRules(DEFAULT_RULES);
+          setTrackingEnabled(true);
           setSelectedShipment(DEFAULT_SHIPMENTS[0]);
           
           // Optionally save default values to DB
           await setDoc(configDocRef, {
             shipments: DEFAULT_SHIPMENTS,
             carriers: INITIAL_CARRIERS,
-            rules: DEFAULT_RULES
+            rules: DEFAULT_RULES,
+            trackingEnabled: true
           });
         }
       } catch (err: any) {
@@ -300,6 +305,7 @@ export default function LogisticsSection() {
         setShipments(DEFAULT_SHIPMENTS);
         setCarriers(INITIAL_CARRIERS);
         setRules(DEFAULT_RULES);
+        setTrackingEnabled(true);
         setSelectedShipment(DEFAULT_SHIPMENTS[0]);
       } finally {
         setLoading(false);
@@ -349,14 +355,16 @@ export default function LogisticsSection() {
   const persistLogistics = async (
     updatedShipments: Shipment[],
     updatedCarriers: CarrierIntegrations,
-    updatedRules: ShippingRule[]
+    updatedRules: ShippingRule[],
+    updatedTrackingEnabled?: boolean
   ) => {
     try {
       const configDocRef = doc(db, 'siteConfig', 'logistics');
       await setDoc(configDocRef, {
         shipments: updatedShipments,
         carriers: updatedCarriers,
-        rules: updatedRules
+        rules: updatedRules,
+        trackingEnabled: updatedTrackingEnabled !== undefined ? updatedTrackingEnabled : trackingEnabled
       });
       setSaveStatus('Logistics changes synced perfectly to Firestore cloud.');
       setTimeout(() => setSaveStatus(null), 3500);
@@ -365,6 +373,19 @@ export default function LogisticsSection() {
       setErrorMsg('Failed to sync changes with cloud database.');
       setTimeout(() => setErrorMsg(null), 4000);
     }
+  };
+
+  // Handle tracking visibility toggle
+  const handleToggleTracking = async (enabled: boolean) => {
+    confirm({
+      title: enabled ? 'Enable Shipment Tracking' : 'Disable Shipment Tracking',
+      message: `Are you sure you want to ${enabled ? 'enable' : 'disable'} the "Track Shipment" floating option on the customer-facing website?`,
+      type: 'save',
+      onConfirm: async () => {
+        setTrackingEnabled(enabled);
+        await persistLogistics(shipments, carriers, rules, enabled);
+      }
+    });
   };
 
   // KPI Calculations
@@ -696,12 +717,32 @@ export default function LogisticsSection() {
           </div>
         </div>
 
-        {/* Sub-tab Indicator - Locked on Shipments to emphasize no complex APIs are needed */}
-        <div className="flex bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-2 px-3.5 rounded-2xl items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-            Company Shipments Registry Mode
-          </span>
+        {/* Actions & Registry Mode */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Track Shipment Toggle Option */}
+          <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-850 p-2 px-3 rounded-2xl">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Customer tracking float:
+            </span>
+            <button
+              type="button"
+              onClick={() => handleToggleTracking(!trackingEnabled)}
+              className={`px-3 py-1 text-[10px] font-bold rounded-lg cursor-pointer transition-all ${
+                trackingEnabled
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+              }`}
+            >
+              {trackingEnabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
+
+          <div className="flex bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-2 px-3.5 rounded-2xl items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              Company Shipments Registry Mode
+            </span>
+          </div>
         </div>
       </div>
 
