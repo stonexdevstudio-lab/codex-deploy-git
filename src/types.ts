@@ -50,6 +50,7 @@ export interface ThemeConfig {
   };
   faviconUrl?: string;
   glassEffects?: boolean;
+  sectionsOrder?: string[];
   loginTheme?: {
     bgUrl?: string;
     overlayColor?: string;
@@ -261,6 +262,4 @@ export const DEFAULT_CUSTOM_ROLES: CustomRole[] = [
     ]
   }
 ];
-
-
 

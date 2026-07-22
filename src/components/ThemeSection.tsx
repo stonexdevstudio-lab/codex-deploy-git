@@ -26,7 +26,8 @@ import {
   ClipboardList,
   PhoneCall,
   Megaphone,
-  Lock
+  Lock,
+  Users
 } from 'lucide-react';
 import { useConfirm } from './ConfirmDialog';
 
@@ -37,6 +38,7 @@ import ListSection from './ListSection';
 import ProductsSection from './ProductsSection';
 import ContactSection from './ContactSection';
 import AnnouncementsSection from './AnnouncementsSection';
+import OrderingSection from './OrderingSection';
 
 const GOOGLE_FONTS = [
   "Inter", "Roboto", "Open Sans", "Montserrat", "Lato", "Poppins", "Oswald", "Raleway",
@@ -96,7 +98,7 @@ export default function ThemeSection({
   onSaveAnnouncements
 }: ThemeSectionProps) {
   const { confirm } = useConfirm();
-  const [activeSubTab, setActiveSubTab] = useState<'theme' | 'hero' | 'about' | 'services' | 'products' | 'why' | 'process' | 'announcements' | 'contact' | 'login-page'>('theme');
+  const [activeSubTab, setActiveSubTab] = useState<'theme' | 'hero' | 'about' | 'services' | 'products' | 'why' | 'process' | 'announcements' | 'contact' | 'login-page' | 'ordering'>('theme');
 
   // General theme states
   const [primaryColor, setPrimaryColor] = useState('#7854F7');
@@ -129,6 +131,8 @@ export default function ThemeSection({
     process: { bg: '#0b0f19', text: '#f8fafc', bgImage: '' },
     contact: { bg: '#0f172a', text: '#f8fafc', bgImage: '' }
   });
+
+  const [sectionsOrder, setSectionsOrder] = useState<string[]>(['about', 'services', 'products', 'why-us', 'process', 'announcements', 'contact']);
   
   // Feature Toggles
   const [whatsapp, setWhatsapp] = useState(true);
@@ -242,6 +246,11 @@ export default function ThemeSection({
         if (themeData.loginTheme.primaryBtnBg) setLoginPrimaryBtnBg(themeData.loginTheme.primaryBtnBg);
         if (themeData.loginTheme.primaryBtnText) setLoginPrimaryBtnText(themeData.loginTheme.primaryBtnText);
       }
+      if (themeData.sectionsOrder) {
+        setSectionsOrder(themeData.sectionsOrder);
+      } else {
+        setSectionsOrder(['about', 'services', 'products', 'why-us', 'process', 'announcements', 'contact']);
+      }
     }
   }, [themeData]);
 
@@ -349,6 +358,8 @@ export default function ThemeSection({
         return <AnnouncementsSection announcementsData={announcementsData} onSave={onSaveAnnouncements} />;
       case 'contact':
         return <ContactSection contactData={contactData} onSave={onSaveContact} />;
+      case 'ordering':
+        return <OrderingSection initialSectionsOrder={sectionsOrder} onSaveOrder={onSaveOrder} saving={saving} />;
       case 'login-page':
         return (
           <div className="space-y-6">
@@ -725,6 +736,80 @@ export default function ThemeSection({
     }
   };
 
+  const onSaveOrder = async (newOrder: string[]) => {
+    setSectionsOrder(newOrder);
+    confirm({
+      title: 'Apply Section Order?',
+      message: 'Are you sure you want to reorder the home page sections? This will immediately apply the new layout sequence.',
+      type: 'save',
+      onConfirm: async () => {
+        setSaving(true);
+        setError(null);
+        try {
+          const updatedTheme: ThemeConfig = {
+            primaryColor,
+            accentColor,
+            headerBg: headerType === 'solid' ? headerSolidColor : headerBg,
+            font,
+            logoUrl,
+            logoType,
+            logoText,
+            logoSize,
+            fontSizeBase,
+            menuTextSize,
+            sectionColors,
+            faviconUrl,
+            toggles: {
+              whatsapp,
+              topbar,
+              ticker,
+              process: processEnabled,
+              stats: statsEnabled
+            },
+            preloader: {
+              showPreloader,
+              preloaderStyle,
+              preloaderAnimation,
+              preloaderLogoUrl,
+              preloaderTheme,
+              preloaderDuration
+            },
+            footer: {
+              bg: footerBg,
+              text: footerText,
+              iconColor: footerIconColor,
+              brandDesc: footerBrandDesc,
+              copyright: footerCopyright,
+              showSocial: showFooterSocial,
+              showLogo: showFooterLogo,
+              footerLogoUrl
+            },
+            glassEffects,
+            sectionsOrder: newOrder,
+            loginTheme: {
+              bgUrl: loginBgUrl,
+              overlayColor: loginOverlayColor,
+              overlayOpacity: loginOverlayOpacity,
+              blurLevel: loginBlurLevel,
+              cardBg: loginCardBg,
+              cardBorder: loginCardBorder,
+              primaryBtnBg: loginPrimaryBtnBg,
+              primaryBtnText: loginPrimaryBtnText
+            }
+          };
+
+          await setDoc(doc(db, 'siteConfig', 'theme'), updatedTheme, { merge: true });
+          onSave(updatedTheme);
+        } catch (err) {
+          console.error('Error saving section ordering:', err);
+          setError(err instanceof Error ? err.message : String(err));
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     confirm({
@@ -824,6 +909,7 @@ export default function ThemeSection({
               footerLogoUrl: finalFooterLogoUrl
             },
             glassEffects,
+            sectionsOrder,
             loginTheme: {
               bgUrl: finalLoginBgUrl,
               overlayColor: loginOverlayColor,
@@ -864,6 +950,7 @@ export default function ThemeSection({
     { id: 'process', label: 'How It Works', icon: ClipboardList, desc: 'Configure order pipeline steps from initial sketch to site drop-off.' },
     { id: 'announcements', label: 'Announcements', icon: Megaphone, desc: 'Write floating announcements or breaking ticker notice list.' },
     { id: 'contact', label: 'Contact Info', icon: PhoneCall, desc: 'Manage active communication addresses, working hours, and phone lines.' },
+    { id: 'ordering', label: 'Section Ordering', icon: Layers, desc: 'Reorder sections via drag and drop to reflect dynamically on the home page and menu.' },
     { id: 'login-page', label: 'Admin Login', icon: Lock, desc: 'Customize admin login screen background image, colors, and styling.' }
   ];
 

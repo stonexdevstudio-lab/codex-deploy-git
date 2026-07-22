@@ -23,12 +23,45 @@
         "description",
         "keywords"
       ]
+    },
+    "TeamMember": {
+      "title": "Team Member",
+      "description": "A professional profile of a Stonex team member",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full name of the team member"
+        },
+        "role": {
+          "type": "string",
+          "description": "Professional position or title"
+        },
+        "avatar": {
+          "type": "string",
+          "description": "Emoji or image URL representing the member"
+        },
+        "bio": {
+          "type": "string",
+          "description": "Short bio or summary of expertise"
+        }
+      },
+      "required": [
+        "name",
+        "role",
+        "avatar",
+        "bio"
+      ]
     }
   },
   "firestore": {
     "siteConfig/seo": {
       "schema": "SeoConfig",
       "description": "The global SEO configurations for the website"
+    },
+    "team/{memberId}": {
+      "schema": "TeamMember",
+      "description": "Individual Stonex team members"
     }
   }
 }

@@ -33,6 +33,7 @@ async function loadSiteConfig() {
       if (cached.process)     applyProcess(cached.process);
       if (cached.seo)         applySeo(cached.seo);
       if (cached.logistics)   applyLogisticsConfig(cached.logistics);
+      if (cached.team)        applyTeam(cached.team);
       console.log('Successfully loaded all site content instantly from local cache.');
       hasCache = true;
     }
@@ -43,7 +44,7 @@ async function loadSiteConfig() {
   // Define the fetching process
   const fetchFreshConfig = async () => {
     try {
-      const [companySnap, heroSnap, servicesSnap, contactSnap, themeSnap, announcementsSnap, whySnap, processSnap, seoSnap, logisticsSnap] =
+      const [companySnap, heroSnap, servicesSnap, contactSnap, themeSnap, announcementsSnap, whySnap, processSnap, seoSnap, logisticsSnap, teamSnap] =
         await Promise.all([
           getDoc(doc(db, 'siteConfig', 'companyInfo')),
           getDoc(doc(db, 'siteConfig', 'hero')),
@@ -55,6 +56,7 @@ async function loadSiteConfig() {
           getDoc(doc(db, 'siteConfig', 'process')),
           getDoc(doc(db, 'siteConfig', 'seo')),
           getDoc(doc(db, 'siteConfig', 'logistics')),
+          getDocs(collection(db, 'team')),
         ]);
 
       const activeConfigs = {};
@@ -109,6 +111,14 @@ async function loadSiteConfig() {
         applyLogisticsConfig(data);
         activeConfigs.logistics = data;
       }
+
+      // Process team members collection
+      const teamList = [];
+      teamSnap.forEach(docSnap => {
+        teamList.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      applyTeam(teamList);
+      activeConfigs.team = teamList;
 
       // Save full package to cache
       try {
@@ -671,6 +681,24 @@ function applyTheme(d) {
   }
   if (d.headerBg) {
     root.style.setProperty('--header-bg', d.headerBg);
+    const headerEl = document.getElementById('site-header');
+    if (headerEl) {
+      if (d.headerBg.startsWith('#')) {
+        if (isColorLight(d.headerBg)) {
+          headerEl.classList.add('theme-light');
+          headerEl.classList.remove('theme-dark');
+        } else {
+          headerEl.classList.add('theme-dark');
+          headerEl.classList.remove('theme-light');
+        }
+      } else if (d.headerBg.includes('rgba')) {
+        headerEl.classList.add('theme-light');
+        headerEl.classList.remove('theme-dark');
+      } else if (d.headerBg.includes('gradient')) {
+        headerEl.classList.add('theme-dark');
+        headerEl.classList.remove('theme-light');
+      }
+    }
   }
   if (d.font) {
     const link = document.createElement('link');
@@ -709,6 +737,19 @@ function applyTheme(d) {
     document.querySelectorAll('.mobile-nav-link').forEach(el => {
       el.style.setProperty('font-size', mobSize, 'important');
     });
+  }
+  if (d.menuStyle) {
+    const navLinksContainer = document.querySelector('.nav-links');
+    if (navLinksContainer) {
+      navLinksContainer.classList.remove('menu-style-capsule', 'menu-style-minimal-underline', 'menu-style-classic', 'menu-style-modern-card');
+      navLinksContainer.classList.add(`menu-style-${d.menuStyle}`);
+    }
+  } else {
+    const navLinksContainer = document.querySelector('.nav-links');
+    if (navLinksContainer) {
+      navLinksContainer.classList.remove('menu-style-capsule', 'menu-style-minimal-underline', 'menu-style-classic', 'menu-style-modern-card');
+      navLinksContainer.classList.add('menu-style-capsule');
+    }
   }
   if (d.sectionColors) {
     const sectionIdsMap = {
@@ -1009,11 +1050,182 @@ function applyTheme(d) {
   // Preloader styling and animation config
   applyPreloader(d.preloader, d);
 
+  // Apply home page and navigation links custom sequence
+  if (d.sectionsOrder) {
+    applySectionsOrder(d.sectionsOrder);
+  }
+
   // Save to local storage for instant preloader hydration on next reload
   try {
     localStorage.setItem('stonex_theme_config', JSON.stringify(d));
   } catch (e) {
     console.warn('Failed to cache theme config in local storage:', e);
+  }
+}
+
+// ─── Sections Ordering Helper ────────────────────────────────
+function applySectionsOrder(rawOrder) {
+  const main = document.querySelector('main.page-transition');
+  if (!main) return;
+
+  const defaultOrder = ['about', 'why-us', 'services', 'products', 'process', 'announcements', 'contact'];
+  const finalOrder = ['home'];
+
+  const order = (rawOrder || [])
+    .map(id => id === 'why' ? 'why-us' : id)
+    .filter(id => id !== 'team');
+
+  const activeSet = new Set();
+  if (order && order.length) {
+    order.forEach(id => {
+      if (id === 'home' || id === 'team') return;
+      if (defaultOrder.includes(id)) {
+        finalOrder.push(id);
+        activeSet.add(id);
+      }
+    });
+  }
+
+  defaultOrder.forEach(id => {
+    if (!activeSet.has(id)) {
+      const indexInDefault = defaultOrder.indexOf(id);
+      let inserted = false;
+      for (let i = indexInDefault + 1; i < defaultOrder.length; i++) {
+        const nextId = defaultOrder[i];
+        const insertPos = finalOrder.indexOf(nextId);
+        if (insertPos !== -1) {
+          finalOrder.splice(insertPos, 0, id);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) {
+        finalOrder.push(id);
+      }
+      activeSet.add(id);
+    }
+  });
+
+  // Reorder elements inside main
+  const children = Array.from(main.children);
+  const elementsMap = {};
+  children.forEach(child => {
+    if (child.id) {
+      elementsMap[child.id] = child;
+    }
+  });
+
+  const mappedElements = new Set();
+  finalOrder.forEach(id => {
+    const el = elementsMap[id];
+    if (el) {
+      main.appendChild(el);
+      mappedElements.add(el);
+    }
+  });
+
+  // Append any leftover unmapped sections at the end
+  children.forEach(child => {
+    if (!mappedElements.has(child)) {
+      main.appendChild(child);
+    }
+  });
+
+  reorderNavLinks(finalOrder);
+}
+
+function reorderNavLinks(finalOrder) {
+  const desktopNav = document.getElementById('nav-links');
+  const mobileNav = document.querySelector('.mobile-nav-links');
+
+  if (desktopNav) {
+    const links = Array.from(desktopNav.children);
+    const homeLi = links.find(li => li.querySelector('a[href="#home"]')) || links[0];
+    const aboutLi = links.find(li => li.querySelector('a[href="#about"]'));
+    const whyLi = links.find(li => li.querySelector('a[href="#why-us"]'));
+    const servicesLi = links.find(li => li.querySelector('a[href="#services"]'));
+    const productsLi = links.find(li => li.querySelector('a[href="#products"]'));
+    const processLi = links.find(li => li.querySelector('a[href="#process"]'));
+    const contactLi = links.find(li => li.querySelector('a[href="#contact"]'));
+
+    const linksMap = {
+      'home': homeLi,
+      'about': aboutLi,
+      'why': whyLi,
+      'why-us': whyLi,
+      'services': servicesLi,
+      'products': productsLi,
+      'process': processLi,
+      'contact': contactLi
+    };
+
+    const mappedElements = new Set();
+
+    finalOrder.forEach(id => {
+      if (id === 'announcements') return;
+      const li = linksMap[id];
+      if (li) {
+        desktopNav.appendChild(li);
+        mappedElements.add(li);
+      }
+    });
+
+    // Append any leftover unmatched links at the end
+    links.forEach(li => {
+      if (!mappedElements.has(li)) {
+        desktopNav.appendChild(li);
+      }
+    });
+  }
+
+  if (mobileNav) {
+    const links = Array.from(mobileNav.children);
+    const homeLi = links.find(li => li.querySelector('a[href="#home"]')) || links[0];
+    const quoteLi = links.find(li => li.querySelector('a.btn-primary'));
+    const aboutLi = links.find(li => li.querySelector('a[href="#about"]'));
+    const whyLi = links.find(li => li.querySelector('a[href="#why-us"]') || li.querySelector('a[href="#why"]'));
+    const servicesLi = links.find(li => li.querySelector('a[href="#services"]'));
+    const productsLi = links.find(li => li.querySelector('a[href="#products"]'));
+    const processLi = links.find(li => li.querySelector('a[href="#process"]'));
+    const contactLi = links.find(li => li.querySelector('a[href="#contact"]'));
+
+    const linksMap = {
+      'home': homeLi,
+      'about': aboutLi,
+      'why': whyLi,
+      'why-us': whyLi,
+      'services': servicesLi,
+      'products': productsLi,
+      'process': processLi,
+      'contact': contactLi
+    };
+
+    const mappedElements = new Set();
+
+    finalOrder.forEach(id => {
+      if (id === 'announcements') return;
+      const li = linksMap[id];
+      if (li && li !== quoteLi) {
+        mobileNav.appendChild(li);
+        mappedElements.add(li);
+      }
+    });
+
+    if (quoteLi) {
+      mappedElements.add(quoteLi);
+    }
+
+    // Append any leftover unmatched links
+    links.forEach(li => {
+      if (!mappedElements.has(li) && li !== quoteLi) {
+        mobileNav.appendChild(li);
+      }
+    });
+
+    // Place the quote CTA button at the very end
+    if (quoteLi) {
+      mobileNav.appendChild(quoteLi);
+    }
   }
 }
 
@@ -1191,6 +1403,51 @@ function applyProcess(d) {
   }
 }
 
+// ─── Team Members ────────────────────────────────────────────
+function applyTeam(list) {
+  const grid = document.getElementById('team-grid');
+  if (!grid) return;
+
+  if (!list || list.length === 0) {
+    // Show beautiful default team members if none exist in the database yet
+    const defaults = [
+      { id: '1', name: 'Sanjay Jayamohan', role: 'Chief Executive Officer', avatar: '👔', bio: 'Directing global trade procurement, client relations, and commercial quarry partnerships with 15+ years of industry expertise.' },
+      { id: '2', name: 'Eng. Amara Vance', role: 'Lead Civil Slabs Inspector', avatar: '📐', bio: 'Verifying material strength tolerances, sizing precision, and ASTM/ISO compliance across major commercial shipments.' },
+      { id: '3', name: 'Marcus Sterling', role: 'Head of Logistics & Heavy Fleet', avatar: '🚛', bio: 'Directing trans-continental shipping operations, specialized flatbed deliveries, and crane rentals for on-site slab placement.' }
+    ];
+    renderTeamList(grid, defaults);
+  } else {
+    renderTeamList(grid, list);
+  }
+}
+
+function renderTeamList(grid, items) {
+  grid.innerHTML = '';
+  items.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'team-card';
+    card.id = `member-${m.id || m.name.toLowerCase().replace(/\s+/g, '-')}`;
+    
+    // Check if avatar is a full URL or emoji
+    const isUrl = m.avatar && (m.avatar.startsWith('http://') || m.avatar.startsWith('https://') || m.avatar.startsWith('data:image'));
+    const avatarHtml = isUrl 
+      ? `<img src="${m.avatar}" alt="${m.name}" class="member-image-pic" />` 
+      : `<span class="member-emoji">${m.avatar || '👷'}</span>`;
+
+    card.innerHTML = `
+      <div class="member-avatar-wrapper">
+        ${avatarHtml}
+      </div>
+      <div class="member-info">
+        <h3 class="member-name">${m.name}</h3>
+        <p class="member-role">${m.role}</p>
+        <p class="member-bio">${m.bio || ''}</p>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
 // ─── SEO Management ──────────────────────────────────────────
 function applySeo(d) {
   if (!d) return;
@@ -1300,6 +1557,8 @@ if (hamburger && mobileMenu) {
     a.addEventListener('click', () => {
       mobileMenu.classList.remove('open');
       hamburger.classList.remove('open');
+      hamburger.setAttribute('aria-expanded', 'false');
+      mobileMenu.setAttribute('aria-hidden', 'true');
     });
   });
   
@@ -1327,11 +1586,17 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // ─── Smooth scroll for nav links ─────────────────────────────
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', e => {
-    const target = document.querySelector(a.getAttribute('href'));
-    if (target) {
-      e.preventDefault();
-      const offset = header ? header.offsetHeight : 0;
-      window.scrollTo({ top: target.offsetTop - offset - 8, behavior: 'smooth' });
+    const href = a.getAttribute('href');
+    if (!href || href === '#') return;
+    try {
+      const target = document.querySelector(href);
+      if (target) {
+        e.preventDefault();
+        const offset = header ? header.offsetHeight : 0;
+        window.scrollTo({ top: target.offsetTop - offset - 8, behavior: 'smooth' });
+      }
+    } catch (err) {
+      console.warn("Invalid selector for smooth scroll:", href, err);
     }
   });
 });
@@ -1629,7 +1894,7 @@ function initTrackingModal() {
       mobileMenu.classList.remove('open');
       mobileMenu.setAttribute('aria-hidden', 'true');
       if (hamburgerBtn) {
-        hamburgerBtn.classList.remove('active');
+        hamburgerBtn.classList.remove('open');
         hamburgerBtn.setAttribute('aria-expanded', 'false');
       }
     }
